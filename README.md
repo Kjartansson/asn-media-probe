@@ -45,6 +45,25 @@ progressive formats leave `acodec` unset that is the normal reading at *every*
 vantage point. This is why the tool compares vantage points against each other
 rather than treating `NO` as a fault in isolation.
 
+## Contributing a datapoint
+
+A single vantage point proves nothing on its own — `audio NO` only means
+something next to another vantage point reporting `yes` for the same URL. The
+useful thing is coverage across providers.
+
+There is a manual-dispatch GitHub Actions workflow
+([`.github/workflows/probe.yml`](.github/workflows/probe.yml)) that runs the
+probe from a hosted runner and reports the runner's egress IP and ASN in the
+job summary. Hosted runners egress from Microsoft/Azure ranges, so it
+contributes a large-cloud datapoint without renting anything; fork it and it
+reports from whatever your runner sits on.
+
+It is dispatch-only by design. A scheduled job would mean this repo quietly
+making automated requests to a platform on a timer, which is neither necessary
+nor polite.
+
+If you get a result worth recording, open a PR adding it to `results/`.
+
 ## Findings
 
 [`results/`](results/) has measured sweeps. The short version, from three hosts

@@ -1,0 +1,81 @@
+# Run the probe from a GitHub Actions runner.
+#
+# The point is the runner's address: hosted runners egress from Microsoft/Azure
+# ranges, so this contributes a datapoint from a large cloud ASN without
+# renting anything. Fork the repo and it reports from whatever provider your
+# runner sits on.
+#
+# Manual dispatch only, deliberately. A scheduled job here would be a repo
+# quietly making automated requests to a platform on a timer, which is neither
+# necessary nor polite.
+
+name: probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Public media URL to probe"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install yt-dlp
+        run: |
+          python -m pip install --upgrade pip
+          # Nightly: the release channel lags extractor fixes badly enough that
+          # a stable build can report a platform as broken when it is not.
+          python -m pip install --pre "yt-dlp[default]"
+          yt-dlp --version
+
+      - name: Identify this vantage point
+        id: whoami
+        run: |
+          ip=$(curl -s --max-time 10 https://api.ipify.org || echo unknown)
+          asn=$(curl -s --max-time 10 "https://ipinfo.io/${ip}/org" || echo unknown)
+          echo "ip=${ip}"   >> "$GITHUB_OUTPUT"
+          echo "asn=${asn}" >> "$GITHUB_OUTPUT"
+          echo "Runner egress: ${ip} — ${asn}"
+
+      - name: Probe
+        id: probe
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python probe.py "${{ inputs.url }}" --via local 2>&1 | tee result.txt
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Probe result"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| vantage | GitHub Actions \`ubuntu-latest\` |"
+            echo "| egress IP | \`${{ steps.whoami.outputs.ip }}\` |"
+            echo "| ASN | ${{ steps.whoami.outputs.asn }} |"
+            echo "| yt-dlp | \`$(yt-dlp --version 2>/dev/null || echo '?')\` |"
+            echo
+            echo '```'
+            cat result.txt 2>/dev/null || echo "(no output)"
+            echo '```'
+            echo
+            echo "A single vantage point cannot show degradation on its own —"
+            echo "\`audio NO\` here is only meaningful against another vantage"
+            echo "point that reports \`yes\` for the same URL. See results/ for"
+            echo "measured comparisons."
+          } >> "$GITHUB_STEP_SUMMARY"
