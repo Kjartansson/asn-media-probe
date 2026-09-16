@@ -71,9 +71,8 @@ reported a video that played with sound on their phone and downloaded silent.
 Every metric said the extraction had succeeded, at full 2560p, on every host.
 
 The write-up of what that cost to find — two wrong fixes, and why the second
-wrong one was the interesting one — is going up at
-[voomreel.com](https://voomreel.com) shortly; this README will link it directly
-once it is live.
+wrong one was the interesting one — is here:
+**[The signal that could only be refreshed by using it](https://voomreel.com/guides/silent-degradation)**.
 
 ## License
 
